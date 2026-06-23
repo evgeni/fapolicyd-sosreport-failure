@@ -8,12 +8,12 @@
         state: present
 
     - name: 'Generate sosreport'
-      command: "sos report --batch --tmp-dir=/root"
+      command: "sos report --batch --tmp-dir=/tmp"
       ignore_errors: true
 
     - name: 'Find sosreport file'
       find:
-        paths: "/root"
+        paths: "/tmp"
         patterns: "sosreport*"
         recurse: no
       register: sosreport_files
