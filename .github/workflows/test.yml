@@ -1,0 +1,45 @@
+---
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+
+concurrency:
+  group: ${{ github.ref_name }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Setup libvirt for Vagrant
+        uses: voxpupuli/setup-vagrant@v0
+        with:
+          configure_dns: true
+      - name: Install Ansible
+        run: pip install --upgrade ansible-core
+      - name: Start VMs
+        run: vagrant up quadlet
+      - name: generate inventory
+        run: ./vagrant.py --yaml > inventories/local_vagrant
+      - name: Configure fapolicyd
+        run: ansible-playbook -i ./inventories -l quadlet ./fapolicyd.yaml
+      - name: Generate sos reports
+        run: ansible-playbook -i ./inventories -l quadlet ./sos.yaml
+      - name: Setup upterm session
+        if: ${{ failure() }}
+        uses: owenthereal/action-upterm@v1
+        with:
+          ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+          limit-access-to-actor: true
+          ## If no one connects after 5 minutes, shut down server.
+          wait-timeout-minutes: 5
